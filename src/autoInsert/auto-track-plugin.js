@@ -64,8 +64,7 @@ const autoTrackPlugin = declare((api, options, dirname) => {
       'ClassMethod|ArrowFunctionExpression|FunctionExpression|FunctionDeclaration'(path, state) {
 
         if (hasCall(path, options)) {
-          path.skip()
-          return
+          return path.skip()
         }
 
         // 获取函数体内容
