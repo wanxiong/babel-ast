@@ -2,6 +2,23 @@ const { declare } = require('@babel/helper-plugin-utils');
 const importModule = require('@babel/helper-module-imports');
 const generate = require('@babel/generator').default;
 
+
+// 函数体内是否已经调用了方法，如果调用了，就不需要重复执行了
+const hasCall = (path, options) => {
+  let isHas = false;
+  path.traverse({
+    ExpressionStatement (curPath) {
+      const { name } = curPath.get('expression.callee').node
+      if (options.trackerPath === name) {
+        isHas = true;
+        curPath.stop()
+      }
+    }
+  })
+
+  return isHas
+}
+
 const autoTrackPlugin = declare((api, options, dirname) => {
   api.assertVersion(7);
   return {
@@ -20,18 +37,14 @@ const autoTrackPlugin = declare((api, options, dirname) => {
                   // 如果是 import { xx } from 'xxx' 
                   // state存储状态
                   state.trackerImportId = specifierPath.toString();
-                  state.trackerAST = api.template.statement(`${state.trackerImportId}()`)();// 埋点代码的 AST
                 } else if (specifierPath.isImportDefaultSpecifier()) {
                   // 如果是 import xx  from 'xxx'
                   // 说明已经引入了模块 import _tracker2 from "tracker"; 不需要在对 name = _tracker2
                   state.trackerImportId = specifierPath.toString();
-                  state.trackerAST = api.template.statement(`${state.trackerImportId}()`)();// 埋点代码的 AST
                 } else if (specifierPath.isImportNamespaceSpecifier()) {
                   // 如果是 import * as xx  from 'xxx
                   state.trackerImportId = specifierPath.get('local').toString();// tracker 模块的 id
-                  state.trackerAST = api.template.statement(`${state.trackerImportId}()`)();// 埋点代码的 AST
                 }
-
               }
             }
           })
@@ -43,12 +56,18 @@ const autoTrackPlugin = declare((api, options, dirname) => {
             state.trackerImportId  = importModule.addDefault(path, 'tracker',{
                 nameHint: path.scope.generateUid('tracker')
             }).name;
-            // ast代码生成
-            state.trackerAST = api.template.statement(`${state.trackerImportId}()`)();// 埋点代码的 AST
-          }
+          } 
+          // ast代码生成
+          state.trackerAST = api.template.statement(`${state.trackerImportId}()`)();// 埋点代码的 AST
         }
       },
       'ClassMethod|ArrowFunctionExpression|FunctionExpression|FunctionDeclaration'(path, state) {
+
+        if (hasCall(path, options)) {
+          path.skip()
+          return
+        }
+
         // 获取函数体内容
         const bodyPath = path.get('body');
         if (bodyPath.isBlockStatement()) {
