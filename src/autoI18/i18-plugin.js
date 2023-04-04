@@ -3,7 +3,8 @@ const importModule = require('@babel/helper-module-imports');
 const generate = require('@babel/generator').default;
 
 function includeChinese(code) {
-  return new RegExp('[\u{4E00}-\u{9FFF}]', 'g').test(code)
+  return code
+  // return new RegExp('[\u{4E00}-\u{9FFF}]', 'g').test(code)
 }
 
 function save(file, key, value) {
@@ -147,11 +148,15 @@ const i18Plugin = declare((api, options, dirname) => {
             } else if (node.type === 'BinaryExpression') {
               // 单纯的字符串  ${ title + desc}
               key = 'slot' + slotIndex
-              slotIndex++
-              params[key] = `${node.left.name} ${node.operator} ${node.right.name}`
+              slotIndex++;
+              params[key] = generate(node).code
               value += `{${key}}`;
             } else if (node.type === 'TemplateElement') {
               value += node.value.raw
+            } else if (node.type === 'MemberExpression') {
+              //   const desc4 = `aaa ${ obj.a}`;
+              key = `slot${++slotIndex}`
+              params[key] = generate(node).code
             }
           })
         
@@ -159,13 +164,10 @@ const i18Plugin = declare((api, options, dirname) => {
           save(state.file, value, value);
           // 生成参数模板
           const t = api.types;
-          const objectExpression = getObjectExpression(t, params );
+          const objectExpression = Object.keys(params).length ?  getObjectExpression(t, params ) : null;
           // 生成表达式 intl('xxx', {})
-         
-          const replaceExpression = t.callExpression(t.identifier(state.intlUid), [
-            t.stringLiteral(value),
-            objectExpression
-          ])
+          const _arguments = objectExpression ? [ t.stringLiteral(value), objectExpression] : [ t.stringLiteral(value)]
+          const replaceExpression = t.callExpression(t.identifier(state.intlUid), _arguments)
           console.log(generate(replaceExpression).code)
           // 替换节点
           path.replaceWith(replaceExpression);
@@ -176,7 +178,9 @@ const i18Plugin = declare((api, options, dirname) => {
       }
     },
     post(file, state) {
-
+      console.log('··········国际化文案·········')
+      console.log(file.get('allText'))
+      console.log('··········国际化文案·········')
     }
   }
 })
