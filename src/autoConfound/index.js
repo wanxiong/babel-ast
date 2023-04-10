@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const confPlugin = require('./conf-plugin');
 const confPlugin1 = require('./compress-plugin');
- 
+const  generator = require('@babel/generator').default;
 
 const str = fs.readFileSync(path.join(__dirname, './test-code.tsx'), {
     encoding: 'utf-8'
@@ -35,10 +35,16 @@ transformFromAstSync(astCode, str, {
 })
 
 
-const { code} = transformFromAstSync(astCode1, str1, {
+const { code, ast} = transformFromAstSync(astCode1, str1, {
     plugins: [[confPlugin1, {
         outputDir: path.resolve(__dirname)
     }]]
 })
 
 console.log(code)
+
+const genA = generator(ast, {
+    sourceMaps: true
+})
+
+console.log(JSON.stringify(genA.map))
