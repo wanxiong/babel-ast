@@ -13,11 +13,10 @@ function App() {
         console.log('456')
     }
 
-    const title = 123
 
     2 ? console.table('text') : console.dir('text');
-
-
+    // console-disabled
+    console.log(123456)
 
     return (
         <div className="app" title={"测试"}>

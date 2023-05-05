@@ -1,6 +1,8 @@
 /* eslint-disable */
 // const generate = require('@babel/generator').default
-// const t = require('@babel/types')
+const t = require('@babel/types')
+
+const comments = 'console-disabled';
 
 function isDeCode(node) {
     let log = node.scope.bindings.log;
@@ -24,6 +26,21 @@ const createWindowDebugNode = function (types, statement, windowKeywords) {
     return newNode;
 };
 
+const isSkipDebug = function (path) {
+    const leadingComments = path.get('leadingComments') || []
+    // 单行注释
+    /*  多行注释 */
+    let hasComment = Array.isArray(leadingComments) ? leadingComments.some((commentPath) => {
+        const commentNode = commentPath.node
+        if (commentNode.type === 'CommentLine' || commentNode.type === 'CommentBlock') {
+            if (commentNode.value.trim() === comments) { return true }
+        }
+        return false
+    }) : false
+
+    return hasComment
+}
+
 const consolePlugin = (api, options, dirname) => {
     const { windowKeywords = 'DEBUG', isDev = false } = options;
     const { types } = api
@@ -37,6 +54,7 @@ const consolePlugin = (api, options, dirname) => {
                 const property = callee?.property;
                 // console.log 出来的
                 if (object?.name === 'console' && property?.name) {
+                    if (isSkipDebug(path.parentPath)) return
                     let newNode = createWindowDebugNode(
                         types,
                         path,
@@ -46,6 +64,7 @@ const consolePlugin = (api, options, dirname) => {
                     path.replaceWith(newNode);
                     // 跳过变遍历
                 } else if (isDeCode(path)) {
+                    if (isSkipDebug(path.parentPath)) return
                     //  const { log } = console 解构出来的
                     let newNode = createWindowDebugNode(
                         types,
