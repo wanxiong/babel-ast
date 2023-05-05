@@ -2,7 +2,7 @@
 // const generate = require('@babel/generator').default
 const t = require('@babel/types')
 
-const comments = 'console-disabled';
+const defatlComments = 'console-disabled';
 
 function isDeCode(node) {
     let log = node.scope.bindings.log;
@@ -26,7 +26,7 @@ const createWindowDebugNode = function (types, statement, windowKeywords) {
     return newNode;
 };
 
-const isSkipDebug = function (path) {
+const isSkipDebug = function (path, comments) {
     const leadingComments = path.get('leadingComments') || []
     // 单行注释
     /*  多行注释 */
@@ -42,7 +42,7 @@ const isSkipDebug = function (path) {
 }
 
 const consolePlugin = (api, options, dirname) => {
-    const { windowKeywords = 'DEBUG', isDev = false } = options;
+    const { windowKeywords = 'DEBUG', isDev = false, comments = defatlComments } = options;
     const { types } = api
     if (isDev) return {};
     // const { types } = api
@@ -54,7 +54,7 @@ const consolePlugin = (api, options, dirname) => {
                 const property = callee?.property;
                 // console.log 出来的
                 if (object?.name === 'console' && property?.name) {
-                    if (isSkipDebug(path.parentPath)) return
+                    if (isSkipDebug(path.parentPath, comments)) return
                     let newNode = createWindowDebugNode(
                         types,
                         path,
@@ -64,7 +64,7 @@ const consolePlugin = (api, options, dirname) => {
                     path.replaceWith(newNode);
                     // 跳过变遍历
                 } else if (isDeCode(path)) {
-                    if (isSkipDebug(path.parentPath)) return
+                    if (isSkipDebug(path.parentPath, comments)) return
                     //  const { log } = console 解构出来的
                     let newNode = createWindowDebugNode(
                         types,
