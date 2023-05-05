@@ -1,4 +1,6 @@
 /* eslint-disable */
+// const generate = require('@babel/generator').default
+// const t = require('@babel/types')
 
 function isDeCode(node) {
     let log = node.scope.bindings.log;
@@ -15,8 +17,10 @@ const createWindowDebugNode = function (types, statement, windowKeywords) {
             types.identifier('window'),
             types.identifier(windowKeywords),
         ),
-        types.blockStatement([statement]),
+        types.blockStatement([types.expressionStatement(statement.node)]),
     );
+    // t.ifStatement
+    // t.expressionStatement()
     return newNode;
 };
 
@@ -35,29 +39,24 @@ const consolePlugin = (api, options, dirname) => {
                 if (object?.name === 'console' && property?.name) {
                     let newNode = createWindowDebugNode(
                         types,
-                        path.parent,
+                        path,
                         windowKeywords,
                     );
-                    path.replaceWith(newNode);
                     // 替换父节点
-                    path.parentPath.replaceWith(newNode);
+                    path.replaceWith(newNode);
                     // 跳过变遍历
-                    path.parentPath.skip();
-                    // path.skip();
-                    return
                 } else if (isDeCode(path)) {
                     //  const { log } = console 解构出来的
                     let newNode = createWindowDebugNode(
                         types,
-                        path.parent,
+                        path,
                         windowKeywords,
                     );
                     path.replaceWith(newNode);
-                    path.skip();
+
                 }
+                path.skip();
 
-
-                // reverse the name: JavaScript -> tpircSavaJ
             },
         },
     };
